@@ -1,9 +1,6 @@
-import { PrismaClient } from "@prisma/client";
 import { Request, Response, NextFunction } from 'express';
 import joi from "joi"
 import nodemailer from "nodemailer"
-
-const prisma = new PrismaClient()
 
 const transporter = nodemailer.createTransport({
     service: "gmail",

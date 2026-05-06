@@ -1,16 +1,16 @@
-import { PrismaClient } from "@prisma/client";
 import { Request, Response, NextFunction } from 'express';
 import joi from "joi"
 import bcryptjs from "bcryptjs"
 import jwt from "jsonwebtoken";
-
-const prisma = new PrismaClient()
+import { prisma } from "../../lib/prisma";
 
 export function postUser(req: Request, res: Response, next: NextFunction) {
     const shcema = joi.object().keys({
-        name: joi.string().min(3).required(),
-        username: joi.string().email().required(),
-        password: joi.string().required()
+        fullName: joi.string().min(3).required(),
+        userName: joi.string().min(3).required(),
+        email: joi.string().email().required(),
+        roleId: joi.string().required(),
+        password: joi.string().required(),
     })
     const { error } = shcema.validate(req.body)
     if (error) {
@@ -19,9 +19,9 @@ export function postUser(req: Request, res: Response, next: NextFunction) {
         })
     }
     const checkUser = async () => {
-        const user = await prisma.users.findUnique({
+        const user = await prisma.user.findUnique({
             where: {
-                username: req.body.username
+                userName: req.body.userName
             }
         })
         return user
@@ -37,19 +37,23 @@ export function postUser(req: Request, res: Response, next: NextFunction) {
     async function main() {
         try {
             const password = await bcryptjs.hash(req.body.password, 10)
-            await prisma.users.create({
+            await prisma.user.create({
                 data: {
-                    name: req.body.name,
-                    username: req.body.username,
-                    password: password
+                    fullName: req.body.fullName,
+                    userName: req.body.userName,
+                    email: req.body.email,
+                    roleId: req.body.roleId,
+                    password: password,
                 }
             })
             res.send({
-                message: `User ${req.body.name} created successfully`,
+                message: `User ${req.body.userName} created successfully`,
             })
 
         } catch (error) {
-            console.log(error)
+            res.status(500).send({
+                message: "Failed to create user"
+            })
         }
     }
     main()
@@ -58,21 +62,23 @@ export function postUser(req: Request, res: Response, next: NextFunction) {
 export function getUsers(req: Request, res: Response, next: NextFunction) {
     async function main() {
         try {
-            const users = await prisma.users.findMany({
+            const users = await prisma.user.findMany({
                 select: {
                     id: true,
-                    username: true,
-                    name: true,
+                    userName: true,
+                    fullName: true,
+                    email: true,
+                    roleId: true,
                     role: true,
-                    status: true,
-                    created_at: true,
-                    updated_at: true,
+                    createdAt: true,
                     posts: true,
                 }
             })
             res.json(users)
         } catch (error) {
-            console.log(error)
+            res.status(500).send({
+                message: "Failed to fetch users"
+            })
         }
     }
     main()
@@ -81,18 +87,18 @@ export function getUsers(req: Request, res: Response, next: NextFunction) {
 export function getUserID(req: Request, res: Response, next: NextFunction) {
     async function main() {
         try {
-            const user = await prisma.users.findUnique({
+            const user = await prisma.user.findUnique({
                 where: {
-                    id: req.params.id
+                    id: String(req.params.id)
                 },
                 select: {
                     id: true,
-                    username: true,
-                    name: true,
+                    userName: true,
+                    fullName: true,
+                    email: true,
+                    roleId: true,
                     role: true,
-                    status: true,
-                    created_at: true,
-                    updated_at: true,
+                    createdAt: true,
                     posts: true,
                 }
             })
@@ -103,7 +109,9 @@ export function getUserID(req: Request, res: Response, next: NextFunction) {
             }
             res.json(user)
         } catch (error) {
-            console.log(error)
+            res.status(500).send({
+                message: "Failed to fetch user"
+            })
         }
     }
     main()
@@ -121,7 +129,7 @@ export function getUserMe(req: Request, res: Response, next: NextFunction) {
 
     async function main() {
         try {
-            const user = await prisma.users.findUnique({
+            const user = await prisma.user.findUnique({
                 where: {
                     id: dataJwt.data.id
                 }
@@ -152,19 +160,27 @@ export function updateUserMe(req: Request, res: Response, next: NextFunction) {
     const dataJwt: any = jwt.verify(`${jwtToken}`, `${process.env.JWT_SECRET}`);
 
     async function main() {
-        const checkUser = await prisma.users.findUnique({
-            where: {
-                id: dataJwt.data.id
-            }
-        })
-        const password = req.body.password ? await bcryptjs.hash(req.body.password, 10) : dataJwt.data.password
         try {
-            const updateUser = await prisma.users.update({
+            const checkUser = await prisma.user.findUnique({
+                where: {
+                    id: dataJwt.data.id
+                }
+            })
+
+            if (!checkUser) {
+                return res.status(400).send({
+                    message: "User not found"
+                })
+            }
+
+            const password = req.body.password ? await bcryptjs.hash(req.body.password, 10) : checkUser.password
+
+            await prisma.user.update({
                 where: {
                     id: dataJwt.data.id
                 },
                 data: {
-                    name: req.body.name,
+                    fullName: req.body.fullName || checkUser.fullName,
                     password: password
                 }
             })
@@ -185,9 +201,9 @@ export function updateUserMe(req: Request, res: Response, next: NextFunction) {
 
 export function updateUser(req: Request, res: Response, next: NextFunction) {
     async function main() {
-        const checkUser = await prisma.users.findUnique({
+        const checkUser = await prisma.user.findUnique({
             where: {
-                id: req.params.id
+                id: String(req.params.id)
             }
         })
         if (!checkUser) {
@@ -195,15 +211,15 @@ export function updateUser(req: Request, res: Response, next: NextFunction) {
                 message: "User not found"
             })
         }
-        const user = await prisma.users.update({
+        const user = await prisma.user.update({
             where: {
-                id: req.params.id
+                id: String(req.params.id)
             },
             data: {
-                name: req.body.name,
-                username: req.body.username,
-                role: req.body.role,
-                status: req.body.status,
+                fullName: req.body.fullName || checkUser.fullName,
+                userName: req.body.userName || checkUser.userName,
+                email: req.body.email || checkUser.email,
+                roleId: req.body.roleId || checkUser.roleId,
             }
         })
         return res.json(user)
@@ -213,9 +229,9 @@ export function updateUser(req: Request, res: Response, next: NextFunction) {
 
 export function deleteUser(req: Request, res: Response, next: NextFunction) {
     const main = async () => {
-        const checkUser = await prisma.users.findUnique({
+        const checkUser = await prisma.user.findUnique({
             where: {
-                id: req.params.id
+                id: String(req.params.id)
             }
         })
         if (!checkUser) {
@@ -223,9 +239,9 @@ export function deleteUser(req: Request, res: Response, next: NextFunction) {
                 message: "User not found"
             })
         }
-        const user = await prisma.users.delete({
+        await prisma.user.delete({
             where: {
-                id: req.params.id
+                id: String(req.params.id)
             }
         })
         return {

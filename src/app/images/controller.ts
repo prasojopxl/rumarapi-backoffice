@@ -1,11 +1,10 @@
 import { Request, Response, NextFunction } from 'express';
-import { PrismaClient } from '@prisma/client'
 import imageSize from "image-size";
 import joi from "joi"
+import { prisma } from "../../lib/prisma";
 
 
 const path = require('path');
-const prisma = new PrismaClient()
 
 export function createImage(req: Request, res: Response, next: NextFunction) {
     const files: any = req.files
@@ -30,14 +29,12 @@ export function createImage(req: Request, res: Response, next: NextFunction) {
 
     async function main() {
         try {
-            const image = await prisma.images.create({
+            await prisma.media.create({
                 data: {
-                    title: files[0].originalname,
-                    url: `/public/${files[0].filename}`,
-                    size: parseInt(files[0].size),
-                    width: parseInt(`${imageSize(files[0].path).width}`),
-                    height: parseInt(`${imageSize(files[0].path).height}`),
-                    mimetype: files[0].mimetype
+                    filename: files[0].originalname,
+                    filePath: `/public/${files[0].filename}`,
+                    fileType: files[0].mimetype,
+                    fileSize: Number(files[0].size),
                 }
             })
             res.status(201).send({
@@ -60,9 +57,9 @@ export function getImageID(req: Request, res: Response, next: NextFunction) {
     async function main() {
         try {
 
-            const image = await prisma.images?.findUnique({
+            const image = await prisma.media.findUnique({
                 where: {
-                    id: req.params.id
+                    id: String(req.params.id)
                 }
             })
             if (!image) {
@@ -81,7 +78,7 @@ export function getImageID(req: Request, res: Response, next: NextFunction) {
 export function getImages(req: Request, res: Response, next: NextFunction) {
     async function main() {
         try {
-            const images = await prisma.images.findMany()
+            const images = await prisma.media.findMany()
             res.json(images)
         } catch (error) {
             console.log(error)

@@ -1,14 +1,12 @@
-import { PrismaClient } from "@prisma/client";
 import { Request, Response, NextFunction } from 'express';
 import joi from "joi"
-import bcrypt, { compareSync } from "bcryptjs"
+import bcrypt from "bcryptjs"
 import jwt from "jsonwebtoken"
-
-const prisma = new PrismaClient();
+import { prisma } from "../../lib/prisma";
 export function Login(req: Request, res: Response, next: NextFunction) {
     async function main() {
         const shcema = joi.object().keys({
-            username: joi.string().email().required(),
+            userName: joi.string().required(),
             password: joi.string().required(),
         })
         const { error } = shcema.validate(req.body)
@@ -18,15 +16,14 @@ export function Login(req: Request, res: Response, next: NextFunction) {
             })
         }
 
-        const checkUser = await prisma.users.findUnique({
+        const checkUser = await prisma.user.findUnique({
             where: {
-                username: req.body.username,
-                status: true
+                userName: req.body.userName,
             }
         })
         if (!checkUser) {
             return res.status(400).send({
-                message: "User not found or not active"
+                message: "User not found"
             })
         }
         const checkPassword = await bcrypt.compare(req.body.password, checkUser.password)
@@ -34,9 +31,8 @@ export function Login(req: Request, res: Response, next: NextFunction) {
             exp: Math.floor(Date.now() / 1000) + (60 * 60), //exp 1 hour
             data: {
                 id: checkUser.id,
-                username: checkUser.username,
-                role: checkUser.role,
-                imageId: checkUser.imageId
+                userName: checkUser.userName,
+                roleId: checkUser.roleId,
             }
         }, `${process.env.JWT_SECRET}`)
         if (!checkPassword) {
@@ -46,7 +42,7 @@ export function Login(req: Request, res: Response, next: NextFunction) {
         }
         return res.json({
             message: "Login successfully",
-            name: checkUser.name,
+            name: checkUser.fullName,
             token
         })
     }
