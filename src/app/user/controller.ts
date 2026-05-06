@@ -4,203 +4,182 @@ import bcryptjs from "bcryptjs"
 import jwt from "jsonwebtoken";
 import { prisma } from "../../lib/prisma";
 
-export function postUser(req: Request, res: Response, next: NextFunction) {
-    const shcema = joi.object().keys({
-        fullName: joi.string().min(3).required(),
-        userName: joi.string().min(3).required(),
-        email: joi.string().email().required(),
-        roleId: joi.string().required(),
-        password: joi.string().required(),
-    })
-    const { error } = shcema.validate(req.body)
-    if (error) {
-        return res.status(400).send({
-            message: error.message
+export async function postUser(req: Request, res: Response, next: NextFunction) {
+    try {
+        const shcema = joi.object().keys({
+            fullName: joi.string().min(3).required(),
+            userName: joi.string().min(3).required(),
+            email: joi.string().email().required(),
+            roleId: joi.string().required(),
+            password: joi.string().required(),
         })
-    }
-    const checkUser = async () => {
-        const user = await prisma.user.findUnique({
+        const { error } = shcema.validate(req.body)
+        if (error) {
+            return res.status(400).send({
+                message: error.message
+            })
+        }
+        
+        const existingUser = await prisma.user.findUnique({
             where: {
                 userName: req.body.userName
             }
         })
-        return user
-    }
-    checkUser()
-        .then((user) => {
-            if (user) {
-                return res.status(400).send({
-                    message: "User already exists"
-                })
+        if (existingUser) {
+            return res.status(400).send({
+                message: "User already exists"
+            })
+        }
+        
+        const password = await bcryptjs.hash(req.body.password, 10)
+        await prisma.user.create({
+            data: {
+                fullName: req.body.fullName,
+                userName: req.body.userName,
+                email: req.body.email,
+                roleId: req.body.roleId,
+                password: password,
             }
         })
-    async function main() {
-        try {
-            const password = await bcryptjs.hash(req.body.password, 10)
-            await prisma.user.create({
-                data: {
-                    fullName: req.body.fullName,
-                    userName: req.body.userName,
-                    email: req.body.email,
-                    roleId: req.body.roleId,
-                    password: password,
-                }
-            })
-            res.send({
-                message: `User ${req.body.userName} created successfully`,
-            })
-
-        } catch (error) {
-            res.status(500).send({
-                message: "Failed to create user"
-            })
-        }
+        res.send({
+            message: `User ${req.body.userName} created successfully`,
+        })
+    } catch (error) {
+        res.status(500).send({
+            message: `Failed to create user, ${error}`
+        })
     }
-    main()
 }
 
-export function getUsers(req: Request, res: Response, next: NextFunction) {
-    async function main() {
-        try {
-            const users = await prisma.user.findMany({
-                select: {
-                    id: true,
-                    userName: true,
-                    fullName: true,
-                    email: true,
-                    roleId: true,
-                    role: true,
-                    createdAt: true,
-                    posts: true,
-                }
-            })
-            res.json(users)
-        } catch (error) {
-            res.status(500).send({
-                message: "Failed to fetch users"
-            })
-        }
-    }
-    main()
-}
-
-export function getUserID(req: Request, res: Response, next: NextFunction) {
-    async function main() {
-        try {
-            const user = await prisma.user.findUnique({
-                where: {
-                    id: String(req.params.id)
-                },
-                select: {
-                    id: true,
-                    userName: true,
-                    fullName: true,
-                    email: true,
-                    roleId: true,
-                    role: true,
-                    createdAt: true,
-                    posts: true,
-                }
-            })
-            if (!user) {
-                return res.status(400).send({
-                    message: "User not found"
-                })
+export async function getUsers(req: Request, res: Response, next: NextFunction) {
+    try {
+        const users = await prisma.user.findMany({
+            select: {
+                id: true,
+                userName: true,
+                fullName: true,
+                email: true,
+                roleId: true,
+                role: true,
+                createdAt: true,
+                posts: true,
             }
-            res.json(user)
-        } catch (error) {
-            res.status(500).send({
-                message: "Failed to fetch user"
-            })
-        }
+        })
+        res.json(users)
+    } catch (error) {
+        res.status(500).send({
+            message: `Failed to fetch users, ${error}`
+        })
     }
-    main()
 }
 
-export function getUserMe(req: Request, res: Response, next: NextFunction) {
-    const token = req.headers ? req.headers?.authorization : null
-    if (!token || token === undefined) {
-        return res.status(401).send({
-            message: "Forbidden Access"
-        });
-    }
-    const jwtToken = token?.split(" ").pop();
-    const dataJwt: any = jwt.verify(`${jwtToken}`, `${process.env.JWT_SECRET}`);
-
-    async function main() {
-        try {
-            const user = await prisma.user.findUnique({
-                where: {
-                    id: dataJwt.data.id
-                }
-            })
-            if (!user) {
-                return res.status(400).json({
-                    message: "User not found",
-                });
+export async function getUserID(req: Request, res: Response, next: NextFunction) {
+    try {
+        const user = await prisma.user.findUnique({
+            where: {
+                id: String(req.params.id)
+            },
+            select: {
+                id: true,
+                userName: true,
+                fullName: true,
+                email: true,
+                roleId: true,
+                role: true,
+                createdAt: true,
+                posts: true,
             }
-            res.json(user)
-        } catch (error) {
-            res.status(401).send({
-                message: "Unauthorized"
+        })
+        if (!user) {
+            return res.status(400).send({
+                message: "User not found"
+            })
+        }
+        res.json(user)
+    } catch (error) {
+        res.status(500).send({
+            message: "Failed to fetch user"
+        })
+    }
+}
+
+export async function getUserMe(req: Request, res: Response, next: NextFunction) {
+    try {
+        const token = req.headers ? req.headers?.authorization : null
+        if (!token || token === undefined) {
+            return res.status(401).send({
+                message: "Forbidden Access"
             });
         }
-    }
-    main()
-}
+        const jwtToken = token?.split(" ").pop();
+        const dataJwt: any = jwt.verify(`${jwtToken}`, `${process.env.JWT_SECRET}`);
 
-export function updateUserMe(req: Request, res: Response, next: NextFunction) {
-    const token = req.headers ? req.headers?.authorization : null
-    if (!token || token === undefined) {
-        return res.status(401).send({
-            message: "Forbidden Access"
-        });
-    }
-    const jwtToken = token?.split(" ").pop();
-    const dataJwt: any = jwt.verify(`${jwtToken}`, `${process.env.JWT_SECRET}`);
-
-    async function main() {
-        try {
-            const checkUser = await prisma.user.findUnique({
-                where: {
-                    id: dataJwt.data.id
-                }
-            })
-
-            if (!checkUser) {
-                return res.status(400).send({
-                    message: "User not found"
-                })
+        const user = await prisma.user.findUnique({
+            where: {
+                id: dataJwt.data.id
             }
-
-            const password = req.body.password ? await bcryptjs.hash(req.body.password, 10) : checkUser.password
-
-            await prisma.user.update({
-                where: {
-                    id: dataJwt.data.id
-                },
-                data: {
-                    fullName: req.body.fullName || checkUser.fullName,
-                    password: password
-                }
-            })
-            res.json({
-                message: "User updated successfully",
-            })
-        } catch (error) {
-            res.status(401).send({
-                message: "Unauthorized"
+        })
+        if (!user) {
+            return res.status(400).json({
+                message: "User not found",
             });
         }
-
+        res.json(user)
+    } catch (error) {
+        res.status(401).send({
+            message: "Unauthorized"
+        });
     }
-    main()
+}
+
+export async function updateUserMe(req: Request, res: Response, next: NextFunction) {
+    try {
+        const token = req.headers ? req.headers?.authorization : null
+        if (!token || token === undefined) {
+            return res.status(401).send({
+                message: "Forbidden Access"
+            });
+        }
+        const jwtToken = token?.split(" ").pop();
+        const dataJwt: any = jwt.verify(`${jwtToken}`, `${process.env.JWT_SECRET}`);
+
+        const checkUser = await prisma.user.findUnique({
+            where: {
+                id: dataJwt.data.id
+            }
+        })
+
+        if (!checkUser) {
+            return res.status(400).send({
+                message: "User not found"
+            })
+        }
+
+        const password = req.body.password ? await bcryptjs.hash(req.body.password, 10) : checkUser.password
+
+        await prisma.user.update({
+            where: {
+                id: dataJwt.data.id
+            },
+            data: {
+                fullName: req.body.fullName || checkUser.fullName,
+                password: password
+            }
+        })
+        res.json({
+            message: "User updated successfully",
+        })
+    } catch (error) {
+        res.status(401).send({
+            message: "Unauthorized"
+        });
+    }
 }
 
 
 
-export function updateUser(req: Request, res: Response, next: NextFunction) {
-    async function main() {
+export async function updateUser(req: Request, res: Response, next: NextFunction) {
+    try {
         const checkUser = await prisma.user.findUnique({
             where: {
                 id: String(req.params.id)
@@ -223,12 +202,15 @@ export function updateUser(req: Request, res: Response, next: NextFunction) {
             }
         })
         return res.json(user)
+    } catch (error) {
+        return res.status(500).send({
+            message: `Failed to update user, ${error}`
+        })
     }
-    main()
 }
 
-export function deleteUser(req: Request, res: Response, next: NextFunction) {
-    const main = async () => {
+export async function deleteUser(req: Request, res: Response, next: NextFunction) {
+    try {
         const checkUser = await prisma.user.findUnique({
             where: {
                 id: String(req.params.id)
@@ -244,11 +226,12 @@ export function deleteUser(req: Request, res: Response, next: NextFunction) {
                 id: String(req.params.id)
             }
         })
-        return {
-            res: res.json({
-                message: `User ${req.params.id} deleted successfully`,
-            }),
-        }
+        return res.json({
+            message: `User ${req.params.id} deleted successfully`,
+        })
+    } catch (error) {
+        return res.status(500).send({
+            message: `Failed to delete user, ${error}`
+        })
     }
-    main()
 }

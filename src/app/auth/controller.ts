@@ -3,8 +3,8 @@ import joi from "joi"
 import bcrypt from "bcryptjs"
 import jwt from "jsonwebtoken"
 import { prisma } from "../../lib/prisma";
-export function Login(req: Request, res: Response, next: NextFunction) {
-    async function main() {
+export async function Login(req: Request, res: Response, next: NextFunction) {
+    try {
         const shcema = joi.object().keys({
             userName: joi.string().required(),
             password: joi.string().required(),
@@ -18,7 +18,7 @@ export function Login(req: Request, res: Response, next: NextFunction) {
 
         const checkUser = await prisma.user.findUnique({
             where: {
-                userName: req.body.userName,
+                userName: req.body.userName
             }
         })
         if (!checkUser) {
@@ -27,24 +27,28 @@ export function Login(req: Request, res: Response, next: NextFunction) {
             })
         }
         const checkPassword = await bcrypt.compare(req.body.password, checkUser.password)
+        if (!checkPassword) {
+            return res.status(400).send({
+                message: "Wrong password"
+            })
+        }
         const token: any = jwt.sign({
-            exp: Math.floor(Date.now() / 1000) + (60 * 60), //exp 1 hour
+            exp: Math.floor(Date.now() / 1000) + (60 * 60),
             data: {
                 id: checkUser.id,
                 userName: checkUser.userName,
                 roleId: checkUser.roleId,
             }
         }, `${process.env.JWT_SECRET}`)
-        if (!checkPassword) {
-            return res.status(400).send({
-                message: "Wrong password"
-            })
-        }
         return res.json({
             message: "Login successfully",
             name: checkUser.fullName,
             token
         })
+    } catch (error) {
+        console.error(error)
+        return res.status(500).send({
+            message: `Login failed: ${error}`
+        })
     }
-    main()
 }

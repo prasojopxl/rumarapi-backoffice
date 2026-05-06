@@ -20,7 +20,6 @@ export const verfyToken = async (req: Request, res: Response, next: NextFunction
                 id: dataJwt.data.id
             }
         })
-        console.log(user)
         if (!user) {
             return res.status(400).json({
                 message: "User not found",

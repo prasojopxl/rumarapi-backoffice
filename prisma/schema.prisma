@@ -63,8 +63,8 @@ model Taggable {
   id            String   @id @default(uuid())
   tagId         String
   tag           Tag      @relation(fields: [tagId], references: [id], onDelete: Cascade)
-  relatableId   String   // ID from Post or Product
-  relatableType String   // "POST" or "PRODUCT"
+  relatableId   String // ID from Post or Product
+  relatableType String // "POST" or "PRODUCT"
   createdAt     DateTime @default(now())
 
   @@unique([tagId, relatableId, relatableType])
@@ -103,27 +103,27 @@ model Product {
 
 // --- 5. BANNERS ---
 model BannerPosition {
-  id          String   @id @default(uuid())
-  name        String
-  slug        String   @unique
-  banners     Banner[]
-  createdAt   DateTime @default(now())
+  id        String   @id @default(uuid())
+  name      String
+  slug      String   @unique
+  banners   Banner[]
+  createdAt DateTime @default(now())
 }
 
 model Banner {
-  id            String          @id @default(uuid())
+  id            String         @id @default(uuid())
   positionId    String
-  position      BannerPosition  @relation(fields: [positionId], references: [id], onDelete: Cascade)
+  position      BannerPosition @relation(fields: [positionId], references: [id], onDelete: Cascade)
   mediaId       String?
-  media         Media?          @relation(fields: [mediaId], references: [id], onDelete: SetNull)
+  media         Media?         @relation(fields: [mediaId], references: [id], onDelete: SetNull)
   title         String?
   subTitle      String?
   linkUrl       String?
-  orderPriority Int             @default(0)
-  isActive      Boolean         @default(true)
+  orderPriority Int            @default(0)
+  isActive      Boolean        @default(true)
   startDate     DateTime?
   endDate       DateTime?
-  createdAt     DateTime        @default(now())
+  createdAt     DateTime       @default(now())
 }
 
 // --- 6. SETTINGS ---
