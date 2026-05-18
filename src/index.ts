@@ -26,7 +26,7 @@ const corsOptions = {
 const storage = multer.diskStorage({
     destination: function (req, file, cb) {
         cb(null, "uploads/images/");
-    },
+    },  
     filename: function (req, file, cb: any) {
         if (!file.originalname) {
             cb(new Error("File not found"), null);
