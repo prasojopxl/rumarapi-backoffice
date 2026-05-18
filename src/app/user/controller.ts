@@ -59,9 +59,8 @@ export async function getUsers(req: Request, res: Response, next: NextFunction) 
                 userName: true,
                 fullName: true,
                 email: true,
-                roleId: true,
-                role: true,
                 createdAt: true,
+                role: true,
                 posts: true,
             }
         })
