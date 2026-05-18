@@ -1,26 +1,19 @@
 import { Request, Response, NextFunction } from 'express';
-import joi from "joi"
 import bcrypt from "bcryptjs"
 import jwt from "jsonwebtoken"
-import { prisma } from "../../lib/prisma";
+import { loginSchema } from "./schema";
+import { findUserByUserName } from "./model";
+
 export async function Login(req: Request, res: Response, next: NextFunction) {
     try {
-        const shcema = joi.object().keys({
-            userName: joi.string().required(),
-            password: joi.string().required(),
-        })
-        const { error } = shcema.validate(req.body)
+        const { error } = loginSchema.validate(req.body)
         if (error) {
             return res.status(400).send({
                 message: error.message
             })
         }
 
-        const checkUser = await prisma.user.findUnique({
-            where: {
-                userName: req.body.userName
-            }
-        })
+        const checkUser = await findUserByUserName(req.body.userName)
         if (!checkUser) {
             return res.status(400).send({
                 message: "User not found"
