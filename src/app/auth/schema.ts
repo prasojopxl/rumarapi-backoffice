@@ -17,3 +17,8 @@ export const updateApiTokenScopeSchema = joi.object({
 	clientKey: joi.string().required(),
 	scope: joi.array().items(joi.string()).min(1).required(),
 })
+
+export const getApiTokensSchema = joi.object({
+	clientKey: joi.string().required(),
+	includeInactive: joi.boolean().truthy("true").falsy("false").default(false),
+})

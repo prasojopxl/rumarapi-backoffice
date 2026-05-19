@@ -2,7 +2,7 @@ import { Request, Response, NextFunction } from 'express';
 import bcrypt from "bcryptjs"
 import jwt from "jsonwebtoken"
 import { prisma } from "../../lib/prisma";
-import { createApiTokenSchema, loginSchema, updateApiTokenScopeSchema } from "./schema";
+import { createApiTokenSchema, getApiTokensSchema, loginSchema, updateApiTokenScopeSchema } from "./schema";
 import { findUserByUserName } from "./model";
 
 export async function Login(req: Request, res: Response, next: NextFunction) {
@@ -152,6 +152,56 @@ export async function UpdateApiTokenScope(req: Request, res: Response, next: Nex
         console.error(error)
         return res.status(500).send({
             message: `Update API token scope failed: ${error}`
+        })
+    }
+}
+
+export async function GetApiTokens(req: Request, res: Response, next: NextFunction) {
+    try {
+        const { error, value } = getApiTokensSchema.validate(req.query)
+        if (error) {
+            return res.status(400).send({
+                message: error.message
+            })
+        }
+
+        if (!process.env.API_TOKEN_ISSUER_KEY) {
+            return res.status(500).send({
+                message: "API_TOKEN_ISSUER_KEY is not configured"
+            })
+        }
+
+        if (value.clientKey !== process.env.API_TOKEN_ISSUER_KEY) {
+            return res.status(401).send({
+                message: "Invalid client key"
+            })
+        }
+
+        const tokens = await prisma.apiToken.findMany({
+            where: value.includeInactive ? {} : { isActive: true },
+            orderBy: {
+                createdAt: "desc"
+            },
+            select: {
+                id: true,
+                name: true,
+                scopes: true,
+                isActive: true,
+                expiresAt: true,
+                createdAt: true,
+                updatedAt: true,
+            }
+        })
+
+        return res.json({
+            message: "API tokens fetched",
+            total: tokens.length,
+            data: tokens,
+        })
+    } catch (error) {
+        console.error(error)
+        return res.status(500).send({
+            message: `Get API tokens failed: ${error}`
         })
     }
 }
