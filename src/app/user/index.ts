@@ -9,8 +9,8 @@ app.route("/")
     .post(postUser)
 
 app.route("/me")
-    .get(getUserMe)
-    .put(updateUserMe)
+    .get(verfyToken, getUserMe)
+    .put(verfyToken, updateUserMe)
 
 app.route("/:id")
     .get(verfyToken, getUserID)

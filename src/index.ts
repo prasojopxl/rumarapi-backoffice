@@ -1,11 +1,21 @@
 import express from "express"
 import dotenv from "dotenv";
 import cors from "cors";
+import swaggerUi from "swagger-ui-express";
 import routeUsers from "./app/user/index"
 import routeImages from "./app/images/index"
 import routeMail from "./app/mail/index"
 import routeAuth from "./app/auth/index"
 import routeCategories from "./app/categories/index"
+import routeRoles from "./app/roles/index"
+import routePosts from "./app/posts/index"
+import routeProducts from "./app/products/index"
+import routeSettings from "./app/settings/index"
+import routeTags from "./app/tags/index"
+import routeTaggables from "./app/taggables/index"
+import routeBannerPositions from "./app/bannerPositions/index"
+import routeBanners from "./app/banners/index"
+import openApiSpec from "./docs/openapi"
 import multer from "multer";
 import path from "path"
 
@@ -53,12 +63,24 @@ app.get("/", (req, res) => {
         message: "Welcome APP !!!"
     })
 })
+app.get("/docs.json", (req, res) => {
+    res.json(openApiSpec)
+})
+app.use("/docs", swaggerUi.serve, swaggerUi.setup(openApiSpec))
 app.use("/public", express.static(path.join(path.dirname(__dirname), "uploads/images")))
 app.use("/users", routeUsers)
 app.use("/images", multer({ storage: storage }).any(), routeImages)
 app.use("/mail", routeMail)
 app.use("/auth", routeAuth)
 app.use("/categories", routeCategories)
+app.use("/roles", routeRoles)
+app.use("/posts", routePosts)
+app.use("/products", routeProducts)
+app.use("/settings", routeSettings)
+app.use("/tags", routeTags)
+app.use("/taggables", routeTaggables)
+app.use("/banner-positions", routeBannerPositions)
+app.use("/banners", routeBanners)
 
 app.listen(port, () => {
     console.log(`server is running on http://localhost:${port}`)
