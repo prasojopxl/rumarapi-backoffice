@@ -1,48 +1,19 @@
 {
-    "name": "pcms",
+    "name": "typecms-monorepo",
+    "private": true,
     "version": "0.0.1",
-    "description": "base api express typescript and prisma",
-    "main": "build/index.js",
+    "workspaces": [
+        "backend",
+        "frontend"
+    ],
     "scripts": {
-        "dev": "nodemon --exec ts-node src/index.ts",
-        "build": "tsc",
-        "start": "node build/index.js",
-        "test": "echo \"Error: no test specified\" && exit 1"
-    },
-    "author": "prasojopxl",
-    "license": "ISC",
-    "dependencies": {
-        "@prisma/adapter-mariadb": "^7.8.0",
-        "@prisma/client": "^7.8.0",
-        "bcryptjs": "^3.0.2",
-        "cors": "^2.8.5",
-        "dotenv": "^16.5.0",
-        "express": "^5.1.0",
-        "image-size": "^2.0.2",
-        "joi": "^17.13.3",
-        "jsonwebtoken": "^9.0.2",
-        "multer": "^2.0.1",
-        "nodemailer": "^7.0.3",
-        "prisma": "^7.8.0",
-        "swagger-jsdoc": "^6.2.8",
-        "swagger-ui-express": "^5.0.1",
-        "winston": "^3.17.0",
-        "winston-daily-rotate-file": "^5.0.0",
-        "yarn": "^1.22.22"
-    },
-    "devDependencies": {
-        "@types/bcryptjs": "^3.0.0",
-        "@types/cors": "^2.8.19",
-        "@types/express": "^5.0.3",
-        "@types/jsonwebtoken": "^9.0.9",
-        "@types/mime-types": "^3.0.1",
-        "@types/multer": "^1.4.13",
-        "@types/node": "^24.0.1",
-        "@types/nodemailer": "^6.4.17",
-        "@types/swagger-jsdoc": "^6.0.4",
-        "@types/swagger-ui-express": "^4.1.8",
-        "nodemon": "^3.1.10",
-        "ts-node": "^10.9.2",
-        "typescript": "^5.8.3"
+        "dev": "npm run dev:be & npm run dev:fe",
+        "dev:be": "npm run -w backend dev",
+        "dev:fe": "npm run -w frontend dev",
+        "build": "npm run build:be && npm run build:fe",
+        "build:be": "npm run -w backend build",
+        "build:fe": "npm run -w frontend build",
+        "start:be": "npm run -w backend start",
+        "preview:fe": "npm run -w frontend preview"
     }
 }

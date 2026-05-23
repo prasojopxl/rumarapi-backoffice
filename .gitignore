@@ -1,14 +1,18 @@
 node_modules
 dist
 build
+backend/build
 src/log/
 uploads/images/*
+backend/uploads/images/*
 log
 .vscode
 # Keep environment variables out of version control
 .env
+.env.sample
 .env.local
 .env.development
+backend/.env
+backend/.env.sample
 
 yarn.lock
-package-lock.json
