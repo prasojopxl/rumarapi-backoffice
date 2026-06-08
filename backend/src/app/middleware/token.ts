@@ -27,7 +27,6 @@ export const verfyToken = async (req: Request, res: Response, next: NextFunction
         }
         next();
     } catch (error) {
-        console.error(error);
         res.status(401).send({
             message: "Unauthorized"
         });
@@ -80,7 +79,6 @@ export const verifyApiToken = (requiredScope?: string) => {
 
             next()
         } catch (error) {
-            console.error(error);
             return res.status(401).send({
                 message: "Unauthorized"
             });
