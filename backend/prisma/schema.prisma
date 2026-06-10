@@ -17,18 +17,21 @@ model Role {
 }
 
 model User {
-  id        String   @id @default(uuid())
-  roleId    String
-  role      Role     @relation(fields: [roleId], references: [id])
-  userName  String   @unique
-  fullName  String
-  email     String   @unique
-  password  String
-  posts     Post[]
-  status    String   @default("draft")
-  apiTokens ApiToken[]
-  createdAt       DateTime @default(now())
-  updatedAt DateTime @default(now()) @updatedAt
+  id           String   @id @default(uuid())
+  roleId       String
+  role         Role     @relation(fields: [roleId], references: [id])
+  userName     String   @unique
+  fullName     String
+  email        String   @unique
+  password     String
+  posts        Post[]
+  clientOrders Order[]  @relation("ClientOrders")
+  workerOrders Order[]  @relation("WorkerOrders")
+  changedOrderHistories OrderStatusHistory[] @relation("OrderStatusChangedByUser")
+  status       String   @default("draft")
+  apiTokens    ApiToken[]
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @default(now()) @updatedAt
 }
 
 model ApiToken {
@@ -65,8 +68,8 @@ model Category {
   slug        String    @unique
   description String?   @db.Text
   products    Product[]
-  createdAt       DateTime @default(now())
-  updatedAt       DateTime @default(now()) @updatedAt
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @default(now()) @updatedAt
 }
 
 model Tag {
@@ -74,8 +77,8 @@ model Tag {
   name      String     @unique
   slug      String     @unique
   taggables Taggable[]
-  createdAt       DateTime @default(now())
-  updatedAt       DateTime @default(now()) @updatedAt
+  createdAt DateTime   @default(now())
+  updatedAt DateTime   @default(now()) @updatedAt
 }
 
 model Taggable {
@@ -84,8 +87,9 @@ model Taggable {
   tag           Tag      @relation(fields: [tagId], references: [id], onDelete: Cascade)
   relatableId   String // ID from Post or Product
   relatableType String // "POST" or "PRODUCT"
-  createdAt       DateTime @default(now())
-  updatedAt       DateTime @default(now()) @updatedAt
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @default(now()) @updatedAt
+
   @@unique([tagId, relatableId, relatableType])
 }
 
@@ -117,11 +121,79 @@ model Product {
   price       Decimal   @db.Decimal(12, 2)
   stock       Int       @default(0)
   status      String    @default("draft")
+  orderItems  OrderItem[]
   createdAt   DateTime  @default(now())
   updatedAt   DateTime  @default(now()) @updatedAt
 }
 
-// --- 5. BANNERS ---
+// --- 5. ORDERS ---
+enum OrderStatus {
+  DRAFT
+  PENDING
+  CANCEL
+  REJECT
+  EXPIRED
+  PROCESS
+  ON_PROGRESS
+  DONE
+}
+
+model Order {
+  id          String      @id @default(uuid())
+  bookingCode String      @unique
+  clientId    String
+  workerId    String?
+  status      OrderStatus @default(DRAFT)
+  scheduledAt DateTime?
+  address     String
+  note        String?
+  items       OrderItem[]
+  histories   OrderStatusHistory[]
+  client      User        @relation("ClientOrders", fields: [clientId], references: [id])
+  worker      User?       @relation("WorkerOrders", fields: [workerId], references: [id])
+  createdAt   DateTime    @default(now())
+  updatedAt   DateTime    @updatedAt
+
+  @@index([clientId])
+  @@index([workerId])
+}
+
+model OrderItem {
+  id          String   @id @default(uuid())
+  orderId     String
+  productId   String
+  productName String
+  quantity    Int      @default(1)
+  price       Decimal  @db.Decimal(12, 2)
+  discount    Decimal  @default(0) @db.Decimal(12, 2)
+  totalPrice  Decimal  @db.Decimal(12, 2)
+  startTime   DateTime?
+  endTime     DateTime?
+  order       Order    @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  product     Product  @relation(fields: [productId], references: [id])
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@index([orderId])
+  @@index([productId])
+}
+
+model OrderStatusHistory {
+  id              String      @id @default(uuid())
+  orderId         String
+  fromStatus      OrderStatus
+  toStatus        OrderStatus
+  changedByUserId String
+  note            String?
+  order           Order       @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  changedByUser   User        @relation("OrderStatusChangedByUser", fields: [changedByUserId], references: [id])
+  createdAt       DateTime    @default(now())
+
+  @@index([orderId])
+  @@index([changedByUserId])
+}
+
+// --- 6. BANNERS ---
 model BannerPosition {
   id        String   @id @default(uuid())
   name      String
@@ -149,9 +221,9 @@ model Banner {
   updatedAt     DateTime       @default(now()) @updatedAt
 }
 
-// --- 6. SETTINGS ---
+// --- 7. SETTINGS ---
 model Setting {
-  key           String @id // Not use uuid because this is a unique identifier (example: 'site_name')
-  value         String @db.Text
+  key      String @id // Not use uuid because this is a unique identifier (example: 'site_name')
+  value    String @db.Text
   siteName String?
 }

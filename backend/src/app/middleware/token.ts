@@ -25,6 +25,7 @@ export const verfyToken = async (req: Request, res: Response, next: NextFunction
                 message: "User not found",
             });
         }
+        ;(req as any).user = user
         next();
     } catch (error) {
         res.status(401).send({

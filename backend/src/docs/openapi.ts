@@ -130,6 +130,7 @@ const openApiSpec = {
     { name: "Taggables" },
     { name: "Banner Positions" },
     { name: "Banners" },
+      { name: "Orders" },
   ],
   components: {
     securitySchemes: {
@@ -315,6 +316,53 @@ const openApiSpec = {
           isActive: { type: "boolean" },
           startDate: { type: "string", format: "date-time", nullable: true },
           endDate: { type: "string", format: "date-time", nullable: true },
+        },
+      },
+      OrderItemInput: {
+        type: "object",
+        required: ["productId"],
+        properties: {
+          productId: { type: "string" },
+          quantity: { type: "number", minimum: 1, default: 1 },
+          discount: { type: "number", minimum: 0, default: 0 },
+          startTime: { type: "string", format: "date-time", nullable: true },
+          endTime: { type: "string", format: "date-time", nullable: true },
+        },
+      },
+      OrderStatus: {
+        type: "string",
+        enum: ["DRAFT", "PENDING", "CANCEL", "REJECT", "EXPIRED", "PROCESS", "ON_PROGRESS", "DONE"],
+      },
+      OrderCreateRequest: {
+        type: "object",
+        required: ["clientId", "address", "items"],
+        properties: {
+          clientId: { type: "string" },
+          workerId: { type: "string", nullable: true },
+          status: { $ref: "#/components/schemas/OrderStatus" },
+          scheduledAt: { type: "string", format: "date-time", nullable: true },
+          address: { type: "string" },
+          note: { type: "string", nullable: true },
+          items: { type: "array", items: { $ref: "#/components/schemas/OrderItemInput" } },
+        },
+      },
+      OrderUpdateRequest: {
+        type: "object",
+        properties: {
+          clientId: { type: "string" },
+          workerId: { type: "string", nullable: true },
+          scheduledAt: { type: "string", format: "date-time", nullable: true },
+          address: { type: "string" },
+          note: { type: "string", nullable: true },
+          items: { type: "array", items: { $ref: "#/components/schemas/OrderItemInput" } },
+        },
+      },
+      OrderStatusUpdateRequest: {
+        type: "object",
+        required: ["status"],
+        properties: {
+          status: { $ref: "#/components/schemas/OrderStatus" },
+          note: { type: "string", nullable: true },
         },
       },
     },
@@ -504,6 +552,86 @@ const openApiSpec = {
     "/banner-positions/{id}": crudPathWithId("Banner Positions", "banner positions", "BannerPositionCreateRequest", "BannerPositionUpdateRequest", authDescription)["/{id}"],
     "/banners": crudPathWithId("Banners", "banners", "BannerCreateRequest", "BannerUpdateRequest", authDescription)["/"],
     "/banners/{id}": crudPathWithId("Banners", "banners", "BannerCreateRequest", "BannerUpdateRequest", authDescription)["/{id}"],
+    "/orders": {
+      get: {
+        tags: ["Orders"],
+        summary: "Get all orders",
+        description: authDescription,
+        security: [{ bearerAuth: [] }],
+        responses: {
+          "200": jsonResponse("Success", [{ id: "uuid", bookingCode: "BK-ABC123", status: "PENDING" }]),
+          "401": jsonResponse("Unauthorized", { message: "Unauthorized" }),
+        },
+      },
+      post: {
+        tags: ["Orders"],
+        summary: "Create order",
+        description: authDescription,
+        security: [{ bearerAuth: [] }],
+        requestBody: { required: true, content: { "application/json": { schema: { $ref: "#/components/schemas/OrderCreateRequest" } } } },
+        responses: {
+          "201": jsonResponse("Created", { id: "uuid", bookingCode: "BK-ABC123", status: "DRAFT" }),
+          "400": jsonResponse("Bad request", { message: "Validation error" }),
+          "401": jsonResponse("Unauthorized", { message: "Unauthorized" }),
+        },
+      },
+    },
+    "/orders/{id}": {
+      get: {
+        tags: ["Orders"],
+        summary: "Get order by id",
+        description: authDescription,
+        security: [{ bearerAuth: [] }],
+        parameters: [{ $ref: "#/components/parameters/IdParam" }],
+        responses: {
+          "200": jsonResponse("Success", { id: "uuid", bookingCode: "BK-ABC123", status: "PENDING", items: [{ id: "uuid", productId: "uuid", productName: "Laundry Regular" }] }),
+          "401": jsonResponse("Unauthorized", { message: "Unauthorized" }),
+          "404": jsonResponse("Not found", { message: "Order not found" }),
+        },
+      },
+      put: {
+        tags: ["Orders"],
+        summary: "Update order",
+        description: authDescription,
+        security: [{ bearerAuth: [] }],
+        parameters: [{ $ref: "#/components/parameters/IdParam" }],
+        requestBody: { required: true, content: { "application/json": { schema: { $ref: "#/components/schemas/OrderUpdateRequest" } } } },
+        responses: {
+          "200": jsonResponse("Success", { id: "uuid", bookingCode: "BK-ABC123", status: "PENDING" }),
+          "400": jsonResponse("Bad request", { message: "Validation error" }),
+          "401": jsonResponse("Unauthorized", { message: "Unauthorized" }),
+          "404": jsonResponse("Not found", { message: "Order not found" }),
+        },
+      },
+      delete: {
+        tags: ["Orders"],
+        summary: "Delete order",
+        description: authDescription,
+        security: [{ bearerAuth: [] }],
+        parameters: [{ $ref: "#/components/parameters/IdParam" }],
+        responses: {
+          "200": jsonResponse("Success", { message: "Order uuid deleted successfully" }),
+          "401": jsonResponse("Unauthorized", { message: "Unauthorized" }),
+          "404": jsonResponse("Not found", { message: "Order not found" }),
+        },
+      },
+    },
+    "/orders/{id}/status": {
+      patch: {
+        tags: ["Orders"],
+        summary: "Update order status",
+        description: authDescription,
+        security: [{ bearerAuth: [] }],
+        parameters: [{ $ref: "#/components/parameters/IdParam" }],
+        requestBody: { required: true, content: { "application/json": { schema: { $ref: "#/components/schemas/OrderStatusUpdateRequest" } } } },
+        responses: {
+          "200": jsonResponse("Success", { id: "uuid", bookingCode: "BK-ABC123", status: "ON_PROGRESS" }),
+          "400": jsonResponse("Bad request", { message: "Validation error" }),
+          "401": jsonResponse("Unauthorized", { message: "Unauthorized" }),
+          "404": jsonResponse("Not found", { message: "Order not found" }),
+        },
+      },
+    },
     "/settings": {
       get: {
         tags: ["Settings"],

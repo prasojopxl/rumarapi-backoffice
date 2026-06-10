@@ -15,6 +15,7 @@ import routeTags from "./app/tags/index"
 import routeTaggables from "./app/taggables/index"
 import routeBannerPositions from "./app/bannerPositions/index"
 import routeBanners from "./app/banners/index"
+import routeOrders from "./app/orders/index"
 import openApiSpec from "./docs/openapi"
 import multer from "multer";
 import path from "path"
@@ -81,6 +82,7 @@ app.use("/tags", routeTags)
 app.use("/taggables", routeTaggables)
 app.use("/banner-positions", routeBannerPositions)
 app.use("/banners", routeBanners)
+app.use("/orders", routeOrders)
 
 app.listen(port, () => {
     console.log(`server is running on http://localhost:${port}`)
